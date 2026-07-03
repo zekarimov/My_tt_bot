@@ -1,7 +1,22 @@
 import os
 import requests
 import telebot
+from threading import Thread
+from flask import Flask
 
+# Создаём фальшивый веб-сервер для обмана Render
+app_web = Flask('')
+
+@app_web.route('/')
+def home():
+    return "Бот работает!"
+
+def run_web():
+    # Render автоматически даёт порт в переменную PORT
+    port = int(os.environ.get("PORT", 10000))
+    app_web.run(host='0.0.0.0', port=port)
+
+# Твой код бота
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -41,4 +56,8 @@ def handle_message(message):
         bot.edit_message_text("Ошибка обработки. Попробуй ещё раз.", message.chat.id, status_msg.message_id)
 
 if __name__ == '__main__':
+    # Запускаем веб-сервер в отдельном потоке
+    Thread(target=run_web).start()
+    # Запускаем бота
     bot.infinity_polling()
+
