@@ -29,12 +29,8 @@ def handle_message(message):
 
     status_msg = bot.reply_to(message, "Скачиваю видео без водяного знака... ⏳")
     try:
-        headers_redirect = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        if "vt.tiktok.com" in url or "vm.tiktok.com" in url:
-            res = requests.get(url, headers=headers_redirect, allow_redirects=True, timeout=15)
-            clean_url = res.url.split('?')[0]
-        else:
-            clean_url = url.split('?')[0]
+        # Просто очищаем хвост ссылки от лишних параметров отслеживания
+        clean_url = url.split('?')[0]
 
         api_url = "https://tiktok-video-no-watermark2.p.rapidapi.com/"
         querystring = {"url": clean_url, "hd": "1"}
@@ -43,6 +39,7 @@ def handle_message(message):
             "X-RapidAPI-Host": "tiktok-video-no-watermark2.p.rapidapi.com"
         }
         
+        # Отправляем ссылку напрямую в RapidAPI
         response = requests.get(api_url, headers=headers, params=querystring, timeout=20).json()
 
         if response.get('code') == 0 and 'data' in response:
