@@ -1,4 +1,5 @@
 import os
+import time
 from threading import Thread
 import requests
 import telebot
@@ -13,7 +14,7 @@ def home():
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Твой ключ со скриншота
+# Твой ключ
 RAPID_API_KEY = "7b12feec3fmsh0341f118809e1a0p1e0e7jsn8ff1254bfba9"
 
 @bot.message_handler(commands=['start'])
@@ -29,7 +30,6 @@ def handle_message(message):
 
     status_msg = bot.reply_to(message, "Скачиваю видео без водяного знака... ⏳")
     try:
-        # Просто очищаем хвост ссылки от лишних параметров отслеживания
         clean_url = url.split('?')[0]
 
         api_url = "https://tiktok-video-no-watermark2.p.rapidapi.com/"
@@ -39,7 +39,6 @@ def handle_message(message):
             "X-RapidAPI-Host": "tiktok-video-no-watermark2.p.rapidapi.com"
         }
         
-        # Отправляем ссылку напрямую в RapidAPI
         response = requests.get(api_url, headers=headers, params=querystring, timeout=20).json()
 
         if response.get('code') == 0 and 'data' in response:
@@ -64,18 +63,24 @@ def handle_message(message):
     except Exception as e:
         bot.edit_message_text("Произошла ошибка при скачивании файла. Попробуй еще раз.", message.chat.id, status_msg.message_id)
 
-if __name__ == '__main__':
-    # 1. Принудительно сбрасываем старые зависшие сообщения в самом Telegram
-    try:
-        bot.delete_webhook(drop_pending_updates=True)
-    except:
-        pass
+def run_bot():
+    while True:
+        try:
+            # Сбрасываем старые сессии перед каждым запуском
+            bot.delete_webhook(drop_pending_updates=True)
+            time.sleep(1)
+            # Запуск стандартного пуллинга
+            bot.polling(none_stop=True, interval=0, timeout=20)
+        except Exception as e:
+            # Если Телеграм ругается, ждем 5 секунд и пробуем снова
+            time.sleep(5)
 
-    # 2. Сначала запускаем бесконечный опрос Telegram бота в отдельном потоке
-    bot_thread = Thread(target=bot.infinity_polling)
+if __name__ == '__main__':
+    # Запускаем бота в фоновом потоке через безопасную функцию
+    bot_thread = Thread(target=run_bot)
     bot_thread.daemon = True
     bot_thread.start()
 
-    # 3. Затем запускаем Flask веб-сервер на главном потоке
+    # Flask сервер держит порт 10000 для Render
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
